@@ -2,8 +2,6 @@ import time
 from machine import SPI, Pin
 
 
-
-
 class AMIS30543:
     """
     A class for the use of the AMIS-30543 Stepper Driver
@@ -53,7 +51,7 @@ class AMIS30543:
     UncompensatedHalf = 201
     UncompensatedFull = 202
 
-    def __init__(self, csPin, stepPin):
+    def __init__(self, csPin, stepPin, spiBlock=0):
         """
         Parameters
         ----------
@@ -61,12 +59,14 @@ class AMIS30543:
             The pin number for Chip Select (AKA Slave Select)
         stepPin : int
             The pin number for NXT
+        spiBlock : int
+            The SPI port numbner for the device.
         """
         self.step = Pin(stepPin, Pin.OUT)
         self.step.low()
         self.cs = Pin(csPin, Pin.OUT)
         self.cs.high()        # disble Chip Select
-        self.driver = SPI(0)
+        self.driver = SPI(spiBlock)
         self.driver.init()
         time.sleep_ms(10)   # give the driver some time to come online
 

@@ -4,4 +4,4 @@ This is a simple port of the arduino library:  https://github.com/pololu/amis-30
 
 I have tested this on the Raspberry Pi Pico only.
 
-This library also includes functions to actually move a motor with and without acceleration. 
+This library also includes functions to move a motor with and without acceleration. 

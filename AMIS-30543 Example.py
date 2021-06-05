@@ -1,3 +1,15 @@
+# Wiring:
+# Pico      -    AMIS-30543
+# SPIO-RX   -    DO     (4.7K pullup)
+# SPIO-TX   -    DI
+# SPIO-CSK  -    CLK
+# 5         -    CS
+# 15        -    NXT
+# Ground    -    GND
+# 
+# Also connect the motor power and the stepper driver.
+
+
 from machine import Pin
 import time
 from AMIS30543 import AMIS30543
@@ -6,10 +18,6 @@ from AMIS30543 import AMIS30543
 stepPin = 15
 csPin = 5
 
-
-
-
-print("Startup")
 
 
 myDriver = AMIS30543(csPin, stepPin)
@@ -23,7 +31,7 @@ print("poistion:", myDriver.readPosition())
 if myDriver.readThermalWarning():
     print("Driver too hot!")
 else:
-    print("Driver cool")
+    print("Driver cool as a cucumber")
 
 
 for i in range(3):
