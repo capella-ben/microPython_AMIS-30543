@@ -34,7 +34,7 @@ else:
     print("Driver cool as a cucumber")
 
 
-for i in range(3):
+for i in range(10):
     print("Iteration:", i)
     myDriver.moveStepsAcc(200 * 4 * 1, 1000, 0, 1000)
     myDriver.moveStepsAcc(200 * 4 * 5, 6000, 1, 1000)

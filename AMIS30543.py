@@ -385,12 +385,26 @@ class AMIS30543:
 
         Returns
         -------
-        int
-            The return value is a 16-bit unsigned integer that has one bit for each status flag.
+        Disctionary
+            Returns the values of all of the latched register flags in a dictionary.
         """
         self.sr1 = self.readStatusReg(self.SR1)
         self.sr2 = self.readStatusReg(self.SR2)
-        return (self.sr2 << 8) | self.sr1
+        lStatus = {}
+        lStatus["OVCXPT"] = (self.sr1 & (1 << 6)) >> 6
+        lStatus["OVCXPB"] = (self.sr1 & (1 << 5)) >> 5
+        lStatus["OVCXNT"] = (self.sr1 & (1 << 4)) >> 4
+        lStatus["OVCXNB"] = (self.sr1 & (1 << 3)) >> 3
+        lStatus["OVCYPT"] = (self.sr2 & (1 << 6)) >> 6
+        lStatus["OVCYPB"] = (self.sr2 & (1 << 5)) >> 5
+        lStatus["OVCYNT"] = (self.sr2 & (1 << 4)) >> 4
+        lStatus["OVCYNB"] = (self.sr2 & (1 << 3)) >> 3
+        lStatus["TSD"]    = (self.sr2 & (1 << 2)) >> 2
+        lStatus["combined"] = (self.sr2 << 8) | self.sr1
+
+        return lStatus
+
+
 
     def readThermalWarning(self):
         """
