@@ -51,6 +51,11 @@ class AMIS30543:
     UncompensatedHalf = 201
     UncompensatedFull = 202
 
+    # helper variables for keeping track of the steppers position. 
+    angle = 0.0
+    position = 0
+    id = ""
+
     def __init__(self, csPin, stepPin, spiBlock=0):
         """
         Parameters

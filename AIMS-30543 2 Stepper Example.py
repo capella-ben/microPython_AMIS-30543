@@ -60,6 +60,8 @@ def dualMove(d1, d2, st1, st2, sp1, sp2, di1, di2, c1, c2):
     c2 : int
         Current for motor 2
     """
+    d1.setDirection(di1)
+    d1.setDirection(di2)
     if not baton.locked():
         _thread.start_new_thread(secondMove, (d1, st1, sp1, di1, c1))
     d2.moveStepsAcc(st2, sp2, di2, c2)
@@ -86,6 +88,7 @@ myDriver2.resetSettings()
 myDriver2.setCurrentMilliamps(myDriver1.idleCurrent)
 myDriver2.setStepMode(myDriver1.MicroStep4)
 myDriver2.enableDriver()
+
 
 
 baton = _thread.allocate_lock()
