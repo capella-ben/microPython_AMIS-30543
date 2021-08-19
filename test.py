@@ -11,6 +11,7 @@
 
 
 from machine import Pin
+from random import random
 import time
 from AMIS30543 import AMIS30543
 
@@ -22,8 +23,9 @@ csPin = 5
 
 myDriver = AMIS30543(csPin, stepPin)
 myDriver.resetSettings()
-myDriver.setCurrentMilliamps(myDriver.idleCurrent)
-myDriver.setStepMode(myDriver.MicroStep4)
+myDriver.setCurrentMilliamps(1000)
+myDriver.setStepMode(myDriver.MicroStep8)
+myDriver.accelPercent = 0.1
 myDriver.enableDriver()
 
 print("poistion:", myDriver.readPosition())
@@ -34,16 +36,10 @@ else:
     print("Driver cool as a cucumber")
 
 
-for i in range(1):
-    print("Iteration:", i)
-    myDriver.moveStepsAcc(200 * 4 * 1, 1000, 30, False, 1000)
-    myDriver.moveStepsAcc(200 * 4 * 5, 6000, 30, True, 1000)
-    myDriver.moveStepsAcc(200 * 4 * 2, 2000, 30, False, 1000)
-    myDriver.moveStepsAcc(200, 5000, 30, True, 800)
-    myDriver.moveStepsAcc(300, 5000, 30, False, 800)
-    myDriver.moveStepsAcc(400, 5000, 30, True, 800)
-    myDriver.moveStepsAcc(500, 5000, 30, False, 800)
-    time.sleep_ms(200)
-    print()
+for i in range(0, 50):
+    print(myDriver.moveStepsAcc(int(random() * 10000), int(random() * 1000 + 1000), 20, bool(round(random())), 2100, True))
+
+
+
 
 myDriver.disableDriver()

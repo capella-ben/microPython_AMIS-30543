@@ -24,7 +24,7 @@ def myThread():
     # Note: you cannot use time.sleep
     baton.acquire()
     myDriver.enableDriver()
-    myDriver.moveStepsAcc(200 * 4 * 1, 1000, 0, 1000)
+    myDriver.moveStepsAcc(200 * 4 * 1, 1000, 30, False, 1000)
     myDriver.disableDriver()
     utime.sleep_ms(1000)
     baton.release()

@@ -1,4 +1,4 @@
-import time
+import time, math
 from machine import SPI, Pin
 
 
@@ -50,6 +50,9 @@ class AMIS30543:
     CompensatedFullOnePhaseOn = 200
     UncompensatedHalf = 201
     UncompensatedFull = 202
+
+    # microStep Multiplier
+    microStepMultiple = 32
 
     # helper variables for keeping track of the steppers position. 
     angle = 0.0
@@ -196,26 +199,37 @@ class AMIS30543:
 
         if mode == self.MicroStep32:
             sm = 0b000
+            self.microStepMultiple = 32
         elif mode == self.MicroStep16:
             sm = 0b001
+            self.microStepMultiple = 16
         elif mode == self.MicroStep8:
             sm = 0b010
+            self.microStepMultiple = 8
         elif mode == self.MicroStep4:
             sm = 0b011
+            self.microStepMultiple = 4
         elif mode == self.CompensatedHalf:      # AKA MicroStep2
             sm = 0b100
+            self.microStepMultiple = 2
         elif mode == self.UncompensatedHalf:
             sm = 0b101
+            self.microStepMultiple = 2
         elif mode == self.UncompensatedFull:
             sm = 0b110
+            self.microStepMultiple = 1
         elif mode == self.MicroStep128:
             esm = 0b001
+            self.microStepMultiple = 128
         elif mode == self.MicroStep64:
             esm = 0b010
+            self.microStepMultiple = 64
         elif mode == self.CompensatedFullTwoPhaseOn:      # AKA Microstep1
             esm = 0b011
+            self.microStepMultiple = 1
         elif mode == self.CompensatedFullOnePhaseOn:
             esm = 0b100
+            self.microStepMultiple = 1
 
         self.cr0 = (self.cr0 & ~0b11100000) | (sm << 5)
         self.cr3 = (self.cr3 & ~0b111) | esm
@@ -423,75 +437,7 @@ class AMIS30543:
         return (self.sr0 & 0b01000000) >> 6
 
 
-    def moveStepsAcc(self, steps, speed, direction, current, debug=False):
-        """
-        Moves the stepper motor with an acceleration and decelleration profile. 
-        Will fail if the driver is in thermal warning
-
-        Parameters
-        ----------
-        steps : int
-            The total number of steps to move
-        speed : int
-            The speed in Hz to move
-        direction : boolean
-        current : int
-            The current in mA to apply to the motor when moving.  After the move the motor is returned to the idleCurrent
-        debug : boolean
-            If True will print debug output
-
-        Returns
-        -------
-        boolean
-            Indicates success or failure (depending on thermal warning)
-        """
-        if not self.readThermalWarning():
-            if debug:
-                print("Move Steps:", steps, " @ speed:", speed, " in dierction:", direction, " using", current, "mA")
-            self.setDirection(direction)
-            self.setCurrentMilliamps(current)
-            loopTimeUs = round(((1/speed) * 1000000) - 5)
-
-            # calculate the number of steps for Acceleration, Deceleration and full speed.
-            aSteps = self.accelPercent * speed
-            dSteps = self.accelPercent * speed
-            # Calculation Acceleration slope
-            aM = (1/aSteps) /2      
-            dM = (1/dSteps) /2
-            # remaining steps at full speed.
-            mSteps = steps - (aSteps + dSteps)
-
-            # Accelerate
-            for i in range(0, aSteps):
-                self.step.high()
-                time.sleep_us(5)
-                self.step.low()
-                multiplier = 1.5 - aM * i
-                time.sleep_us(round(loopTimeUs * multiplier))
-            
-            # Full Speed
-            for i in range(1, mSteps):
-                self.step.high()
-                time.sleep_us(5)
-                self.step.low()
-                time.sleep_us(loopTimeUs)
-
-            # Decellerate
-            for i in range(0, dSteps):
-                self.step.high()
-                time.sleep_us(5)
-                self.step.low()
-                multiplier = dM * i + 1
-                time.sleep_us(round(loopTimeUs * multiplier))
-            
-            self.setCurrentMilliamps(self.idleCurrent)
-            return True
-        else:
-            print("Error:  Driver in termal warning")
-            return False
-
-
-    def moveSteps(self, steps, speed, direction, current, debug=False):
+    def moveSteps(self, steps: int, speed: int, direction: bool, current: int, debug=False):
         """
         Moves the stepper motor without any acceleration/decelleration.
         Will fail if the driver is in thermal warning
@@ -527,3 +473,115 @@ class AMIS30543:
             self.setCurrentMilliamps(self.idleCurrent)
         else:
             print("Error:  Driver in termal warning")
+
+
+
+
+
+    def moveStepsAcc(self, steps: int, speed: int, accel: int, direction: bool, current: int, debug=False):
+        """
+        Moves the stepper motor with an acceleration and decelleration profile. 
+        Will fail if the driver is in thermal warning
+
+        Parameters
+        ----------
+        steps : int
+            The total number of steps to move
+        speed : int
+            The speed in Hz to move, compoensated for microstepping
+        accel : int
+            The acceleration slope to use.  Typical values are between 2 (slow) and 50 (fast)
+        direction : boolean
+        current : int
+            The current in mA to apply to the motor when moving.  After the move the motor is returned to the idleCurrent
+        debug : boolean
+            If True will print debug output
+
+        Returns
+        -------
+        boolean
+            Indicates success or failure (depending on thermal warning and achieving the correct number of steps)
+        """
+        j = 0
+        
+        # Compensate speed for microstepping
+        speed = speed * self.microStepMultiple
+                
+        if not self.readThermalWarning():
+            if debug:
+                print("Move Steps:", steps, " @ speed:", speed, " in direction:", direction, " using", current, "mA")
+            self.setDirection(direction)
+            self.setCurrentMilliamps(current)
+            loopTimeUs = round(((1/speed) * 1000000) - 5)
+            if debug: print("\tLoop Time (us):", loopTimeUs)
+
+            # Calculation Acceleration slope
+            aM = accel
+            dM = aM
+            if debug: print("\tAccel Slope:", aM, "Decell Slope", dM)
+
+            # calculate the number of steps for Acceleration, Deceleration and full speed.
+            aSteps = int(speed/aM)
+            dSteps = int(speed/dM)
+            if debug: print("\taSteps: ", aSteps, "dSteps", dSteps)
+
+            # remaining steps at full speed.
+            mSteps = steps - (aSteps + dSteps)
+            
+            # if there are not enough steps to do a full acceleration and decelleration...
+            if mSteps < 0:
+                adj = abs(mSteps)
+                mSteps = 0
+                if (adj % 2) == 0:  #even
+                    aSteps = int(aSteps - (adj/2))
+                    dSteps = int(dSteps - (adj/2))
+                else:               #odd
+                    aSteps = int(aSteps - math.ceil(adj/2))
+                    dSteps = int(dSteps - math.floor(adj/2))
+
+                print("\tModified Speed:", aM * aSteps)
+                speed = aM * aSteps  # as we won't actually get to max speed we need to change this so the decelleration works
+
+            if debug: print("\tmod aSteps: ", aSteps, "dSteps", dSteps)
+
+
+
+            if debug: print("\tSteps at full speed:", mSteps)
+
+            if debug: print('\tAcc')
+            # Accelerate
+            for i in range(1, aSteps+1):
+                self.step.high()
+                time.sleep_us(5)
+                self.step.low()
+                # calc frequency (aM*i), convert to period (1/freq), then convert to microseconds (perion*1000000)
+                delay = round((1/(aM * i)) * 1000000)
+                time.sleep_us(delay-5)
+                j = j + 1
+            
+            if debug: print("\tFull")
+            # Full Speed
+            for i in range(1, mSteps+2):                    # we can't have the decelleration going too long as we get a divide by 0, so I add the extra step here
+                self.step.high()
+                time.sleep_us(5)
+                self.step.low()
+                time.sleep_us(loopTimeUs)
+                j = j + 1
+
+            if debug: print("\tDec")
+            # Decellerate
+            for i in range(1, dSteps):
+                self.step.high()
+                time.sleep_us(5)
+                self.step.low()
+                delay = round((1/(max(speed - (dM * i),10))) * 1000000)       # the max() is to ensure that we don't go all the way down to 0hZ and hence get a divide by 0.
+                time.sleep_us(delay-5)
+                j = j + 1
+            
+            
+            self.setCurrentMilliamps(self.idleCurrent)
+            return steps == j       # true if the correct number of steps have been requested
+        else:
+            print("Error:  Driver in termal warning")
+            return False
+

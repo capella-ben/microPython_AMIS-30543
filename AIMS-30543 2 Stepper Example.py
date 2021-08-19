@@ -23,17 +23,17 @@ stepPin2 = 14
 csPin2 = 13
 
 
-def secondMove(drv, steps, speed, dir, current):
+def secondMove(drv, steps, speed, acc, dir, current):
     """
     Function for moving a stepper in a seperate thread.
     """
     # Note: you cannot use time.sleep, use utime.sleep instead
     # Note: you cannot do SPI based commands on more than one driver at the same time. 
     baton.acquire()
-    drv.moveStepsAcc(steps, speed, dir, current)
+    drv.moveStepsAcc(steps, speed, acc, dir, current)
     baton.release()
 
-def dualMove(d1, d2, st1, st2, sp1, sp2, di1, di2, c1, c2):
+def dualMove(d1, d2, st1, st2, sp1, sp2, ac1, ac2, di1, di2, c1, c2):
     """
     Move 2 steppers at the same time
 
@@ -51,6 +51,10 @@ def dualMove(d1, d2, st1, st2, sp1, sp2, di1, di2, c1, c2):
         Speed for motor 1
     sp2 : int
         Speed for motor 2
+    ac1 : int
+        Acceleration for motor 1
+    ac2 : int
+        Acceleration for motor 2
     di1 : boolean
         direction of motor 1
     di2 : boolean
@@ -63,8 +67,8 @@ def dualMove(d1, d2, st1, st2, sp1, sp2, di1, di2, c1, c2):
     d1.setDirection(di1)
     d1.setDirection(di2)
     if not baton.locked():
-        _thread.start_new_thread(secondMove, (d1, st1, sp1, di1, c1))
-    d2.moveStepsAcc(st2, sp2, di2, c2)
+        _thread.start_new_thread(secondMove, (d1, st1, sp1, ac1, di1, c1))
+    d2.moveStepsAcc(st2, sp2, ac2, di2, c2)
 
     # make sure that the other thread has finished before moving on.
     while baton.locked():
@@ -94,7 +98,7 @@ myDriver2.enableDriver()
 baton = _thread.allocate_lock()
 
 # move 2 steppers at the same time. 
-dualMove(myDriver1, myDriver2, 200*4*3, 200*4*1, 2500, 300, 1, 0, 2000, 500)
+dualMove(myDriver1, myDriver2, 200*4*3, 200*4*1, 2500, 300, 30, 20, 1, 0, 2000, 500)
 
 
 
