@@ -539,7 +539,7 @@ class AMIS30543:
                     aSteps = int(aSteps - math.ceil(adj/2))
                     dSteps = int(dSteps - math.floor(adj/2))
 
-                print("\tModified Speed:", aM * aSteps)
+                #print("\tModified Speed:", aM * aSteps)
                 speed = aM * aSteps  # as we won't actually get to max speed we need to change this so the decelleration works
 
             if debug: print("\tmod aSteps: ", aSteps, "dSteps", dSteps)
